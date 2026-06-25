@@ -1,5 +1,10 @@
 # candidacy - Project Instructions
 
+## Session start
+
+At the start of a session, read `docs/session-resume.md` for where work left off, the
+next action, and open blockers. Update it at session close.
+
 ## What this project is
 
 A from-scratch rebuild of the `career` repo's job-application pipeline as a LangGraph
