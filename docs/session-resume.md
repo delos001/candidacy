@@ -8,7 +8,10 @@ Setup / learning phase of rebuilding the `career` pipeline as a LangGraph app. T
 pipeline itself has NOT been designed yet, by intent. Design decisions so far are in
 `docs/design-decisions.md` (D1-D6). Software, tooling, and cost are now settled; the
 immediate next work is a hands-on LangGraph learning spike to make the primitives concrete
-before any real design.
+before any real design. The spike is fully specced, its open decisions are locked, and all
+setup is done (API key placed, $20 credit funded). Work is moving into the VS Code Claude
+Code extension; the immediate next action is a one-line smoke test to confirm the real
+Claude call works, then building the spike graph (see Next action).
 
 Convention agreed this session: durable design decisions live in `docs/design-decisions.md`;
 findings and work items live in GitHub (issues), not local docs. Keeps decisions in one
@@ -30,6 +33,34 @@ place and findings out of the auto-loaded context.
 - Milestone **M1: First slice (intake -> retrieval -> gap-analysis)** exists in GitHub
   (empty; no issues attached). The 5 starter issues from the earlier plan were NOT filed;
   that plan is superseded by doing the learning spike first.
+- **LangGraph Studio evaluated** (the visual debugger the user recalled). Verdict: a later,
+  optional upgrade, not no-code. It attaches to a locally-running dev server and lets you
+  step through a run, inspect/edit state at interrupts, and time-travel. Needs three things
+  not present yet: the `langgraph-cli[inmem]` package (NOT installed in `agents`; only core
+  `langgraph` 1.1.3, checkpoint, prebuilt, sdk are), a `langgraph.json` config, and a free
+  LangSmith login. Nothing to visualize until the spike graph exists. Plan: build the spike
+  with the built-in Mermaid PNG render first, then optionally point Studio at that same graph
+  as an additive learning step. If adopted, add `langgraph-cli` to `engops/conda/agents.yml`
+  to avoid env drift.
+- **Spike subagent step RESOLVED: real Claude call** (not stub). Model `claude-haiku-4-5`
+  (pennies). Billing prerequisite handled: user added **$20 of API credit in the Anthropic
+  Console** (the developer "Pool 2", separate site `console.anthropic.com`). Confirmed via
+  Anthropic help center that the claude.ai subscription "usage credits" (Pool 1, ~$99.60)
+  do NOT pay for API calls; the API is a separate prepaid balance. **API key DONE:** user
+  generated it in the Console and saved it to `spike/.env` as `ANTHROPIC_API_KEY=...`
+  (`.env` is covered by `.gitignore`; confirmed the file exists at `candidacy/spike/.env`).
+- **Real-call reference check DONE** (claude-api skill, 2026-07-13). Exact model id is the
+  plain alias `claude-haiku-4-5` (do NOT append a date suffix). The call path for a LangGraph
+  app is `ChatAnthropic` from `langchain-anthropic` (installed), which reads `ANTHROPIC_API_KEY`
+  from the env that python-dotenv loads. Haiku is a deliberate spike-only choice (cheapest
+  tier); the real pipeline's model is the deferred bake-off, not this.
+- **Working style captured** (memory `user-types-code-himself`): the user hand-types the
+  code to learn; deliver explained snippets, do NOT author implementation files with
+  Write/Edit. Reserve direct writes for scaffolding/config/docs he approves.
+- **Environment switch verified.** Moving from a standalone terminal to the **Claude Code VS
+  Code extension** (better for hand-typing + a step-debugger for learning; PowerShell remains
+  the shell underneath, so the "use PowerShell" rule is unaffected). Extension and CLI share
+  the same conversation store, so this session is resumable there.
 
 ## Next action (resume here): build the learning spike
 
@@ -44,19 +75,46 @@ A small, throwaway, runnable LangGraph script to make the primitives concrete. A
   human stop-and-wait (interrupt + a checkpointer so it can pause/resume).
 - Auto-generate a diagram each run: a PNG via LangGraph's built-in Mermaid render, plus the
   Mermaid text saved alongside. (LangGraph Studio is a later, optional upgrade.)
-- DECIDE FIRST: the subagent step is stub (free, deterministic) vs a real tiny Claude call.
-  User leaned "real" to understand it, but a real call needs Anthropic **API** billing set
-  up on the Console (separate from the $100/mo subscription; pennies, but a one-time setup
-  step) plus an `ANTHROPIC_API_KEY` in a gitignored `.env` loaded via python-dotenv. Confirm
-  stub vs real at the start, since real has the billing prerequisite.
+- Subagent step is a **real Claude call** (`claude-haiku-4-5`) via `ChatAnthropic` from
+  `langchain-anthropic`, key loaded from `spike/.env` via python-dotenv. Confirm the exact
+  model id and `ChatAnthropic` usage against the claude-api reference when writing that node.
+
+IMMEDIATE next step (in VS Code, session resumed there):
+1. **Smoke test the real call.** Type this into `spike/smoke_test.py` (throwaway, delete after):
+
+   ```python
+   from dotenv import load_dotenv
+   from langchain_anthropic import ChatAnthropic
+
+   load_dotenv("spike/.env")
+   llm = ChatAnthropic(model="claude-haiku-4-5", max_tokens=50)
+   print(llm.invoke("Say hello in exactly five words.").content)
+   ```
+
+   Run from the project root: `conda activate agents; python spike/smoke_test.py`. A
+   five-word greeting = billing + key + env all confirmed. On error, a bad key vs an unfunded
+   account give distinct messages.
+2. **Build the spike** per the sequence below (deliver as snippets the user types, not file
+   writes). The `spike/` folder already exists; `spike/.env` holds the key.
+
+Environment-switch reference (mostly done): VS Code extension installed + signed in; resume
+this conversation via the Claude Code panel's **Session history** button (extension + CLI
+share one store). CLI `claude --continue` / `--resume` also works but needs the standalone
+CLI on PATH (`irm https://claude.ai/install.ps1 | iex`), separate from the extension's bundle.
+
+Agreed build sequence for the spike: (1) state schema + node stubs + wiring, run dry;
+(2) add fork/cycle/loop-guard; (3) add interrupt + checkpointer; (4) swap gap_check to the
+real Claude call; (5) add diagram output (write `spike/graph.mmd` + render `spike/graph.png`,
+render wrapped in try/except). Deliver as snippets for the user to type, not file writes.
 
 After the spike lands, the real design work begins (map the intake/retrieval/gap-analysis
 skills, the shared state schema, the graph topology).
 
 ## Open questions / blockers
 
-- **Spike subagent step: stub vs real Claude call.** Real needs API billing on the Console +
-  an `ANTHROPIC_API_KEY` in a gitignored `.env`. Decide at start.
+- **Setup fully done** (was: API key placement). Stub-vs-real resolved to real; $20 Console
+  credit funded; API key generated and saved to `spike/.env`. Next is the smoke test, then
+  the build. No setup blockers remain.
 - **Model-tier bake-off deferred** to the retrieval-node build (issue #1). Scorers are graded
   relevance judgments, not mechanical lookups; whether Haiku holds quality is unknown.
 - **GitHub MCP: resolved.** Connected server is the self-managed
@@ -78,3 +136,13 @@ skills, the shared state schema, the graph topology).
   list them; `issue_write` can only assign an issue to an existing milestone. Create in the
   GitHub UI. `gh` CLI is not installed.
 - Repo: `delos001/candidacy`.
+- VS Code extension (verified 2026-07-13 vs `code.claude.com/docs/en/vs-code.md`): resume
+  past sessions via the panel's **Session history** button; extension + CLI share one
+  conversation store; extension install is marketplace + browser sign-in (no API key). The
+  bundled CLI is NOT on PATH; running `claude` in the integrated terminal needs the separate
+  standalone CLI install. Unconfirmed by docs: whether opening the project folder as the
+  workspace is strictly required (open it to be safe).
+- Billing pools (verified vs Anthropic help center): Pool 1 = claude.ai subscription "usage
+  credits" (covers claude.ai + Claude Code terminal usage), bought at `claude.ai`. Pool 2 =
+  developer API prepaid credits, bought separately at `console.anthropic.com`. They do not
+  cross over. The spike's real call spends Pool 2.
