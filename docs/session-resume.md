@@ -33,15 +33,10 @@ place and findings out of the auto-loaded context.
 - Milestone **M1: First slice (intake -> retrieval -> gap-analysis)** exists in GitHub
   (empty; no issues attached). The 5 starter issues from the earlier plan were NOT filed;
   that plan is superseded by doing the learning spike first.
-- **LangGraph Studio evaluated** (the visual debugger the user recalled). Verdict: a later,
-  optional upgrade, not no-code. It attaches to a locally-running dev server and lets you
-  step through a run, inspect/edit state at interrupts, and time-travel. Needs three things
-  not present yet: the `langgraph-cli[inmem]` package (NOT installed in `agents`; only core
-  `langgraph` 1.1.3, checkpoint, prebuilt, sdk are), a `langgraph.json` config, and a free
-  LangSmith login. Nothing to visualize until the spike graph exists. Plan: build the spike
-  with the built-in Mermaid PNG render first, then optionally point Studio at that same graph
-  as an additive learning step. If adopted, add `langgraph-cli` to `engops/conda/agents.yml`
-  to avoid env drift.
+- **LangGraph Studio evaluated:** a later, optional visual debugger (not no-code), to
+  revisit once a real graph exists. Build the spike with the built-in Mermaid render first.
+  Full write-up + adoption prerequisites (langgraph-cli, langgraph.json, LangSmith, agents.yml
+  update) live in GitHub **issue #3**, not here.
 - **Spike subagent step RESOLVED: real Claude call** (not stub). Model `claude-haiku-4-5`
   (pennies). Billing prerequisite handled: user added **$20 of API credit in the Anthropic
   Console** (the developer "Pool 2", separate site `console.anthropic.com`). Confirmed via
