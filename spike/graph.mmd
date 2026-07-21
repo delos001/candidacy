@@ -1,0 +1,23 @@
+---
+config:
+  flowchart:
+    curve: linear
+---
+graph TD;
+	__start__([<p>__start__</p>]):::first
+	intake(intake)
+	retrieve(retrieve)
+	gap_check(gap_check)
+	draft(draft)
+	flag_gaps(flag_gaps)
+	__end__([<p>__end__</p>]):::last
+	__start__ --> intake;
+	gap_check -.-> draft;
+	gap_check -.-> flag_gaps;
+	intake --> retrieve;
+	retrieve --> gap_check;
+	draft --> __end__;
+	flag_gaps --> __end__;
+	classDef default fill:#f2f0ff,line-height:1.2
+	classDef first fill-opacity:0
+	classDef last fill:#bfb6fc

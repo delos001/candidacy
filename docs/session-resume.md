@@ -6,12 +6,17 @@ Read this first when resuming work on candidacy. Update it at session close.
 
 Setup / learning phase of rebuilding the `career` pipeline as a LangGraph app. The
 pipeline itself has NOT been designed yet, by intent. Design decisions so far are in
-`docs/design-decisions.md` (D1-D6). Software, tooling, and cost are now settled; the
-immediate next work is a hands-on LangGraph learning spike to make the primitives concrete
-before any real design. The spike is fully specced, its open decisions are locked, and all
-setup is done (API key placed, $20 credit funded). Work is moving into the VS Code Claude
-Code extension; the immediate next action is a one-line smoke test to confirm the real
-Claude call works, then building the spike graph (see Next action).
+`docs/design-decisions.md` (D1-D6). Software, tooling, and cost are now settled. We are
+mid-way through the hands-on LangGraph learning spike. The smoke test passed and the spike
+graph is partly built: state, nodes, edges, a working conditional fork, and diagram output
+are all done and verified. Next primitive to add is a cycle (loop-back) with a loop guard,
+via a QC-fail-retry loop (see Next action). Work is in the VS Code Claude Code extension.
+
+Teaching cadence (important for how the next session must run): the user hand-types every
+line and learns by doing. Deliver ONE small snippet at a time (a few lines), explain it, and
+WAIT for him to type/save/run before the next piece. Do not dump large code blocks; he
+explicitly will not tolerate scrolling between code and explanation. Flag any contrived
+teaching example as contrived up front (memory `flag-contrived-teaching-examples`).
 
 Convention agreed this session: durable design decisions live in `docs/design-decisions.md`;
 findings and work items live in GitHub (issues), not local docs. Keeps decisions in one
@@ -57,7 +62,31 @@ place and findings out of the auto-loaded context.
   the shell underneath, so the "use PowerShell" rule is unaffected). Extension and CLI share
   the same conversation store, so this session is resumable there.
 
-## Next action (resume here): build the learning spike
+## Next action (resume here): add the cycle + loop guard to the spike
+
+`spike/spike.py` already runs and demonstrates state, nodes, edges, a conditional fork
+(`gap_check` -> `route_after_gap_check` -> `draft`/`flag_gaps`, with a path_map so the
+diagram draws it), and diagram output (`spike/graph.mmd` + `spike/graph.png` via
+`draw_mermaid()` / `draw_mermaid_png()`, PNG wrapped in try/except). Verified both branches
+by changing the input role.
+
+RESUME HERE: build a QC-fail-retry **cycle** next. Add a `qc` node after `draft`, a router
+that on "fail" re-routes BACK to `draft` (a backward edge = a cycle), and a loop-count guard
+in state (e.g. an `attempts` int) that forces the router to give up after N tries so it can't
+loop forever. This is the first primitive that makes a graph more than a linear script.
+Deliver one small snippet at a time per the teaching cadence above.
+
+Still remaining after the cycle (original spec, unbuilt): the subagent trigger (a node that
+delegates a sub-task, done as the REAL Claude call to `claude-haiku-4-5` via `ChatAnthropic`
+from `langchain-anthropic`, key from `spike/.env`), and a human stop-and-wait (interrupt +
+checkpointer so the run can pause/resume). Confirm model id / `ChatAnthropic` usage against
+the claude-api skill when building the Claude node.
+
+Housekeeping: `spike/smoke_test.py` served its purpose (real call confirmed) and can be
+deleted; ask the user before deleting.
+
+---
+### Original spike spec (for reference)
 
 A small, throwaway, runnable LangGraph script to make the primitives concrete. Agreed spec:
 
