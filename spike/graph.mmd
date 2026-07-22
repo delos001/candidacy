@@ -10,14 +10,21 @@ graph TD;
 	gap_check(gap_check)
 	draft(draft)
 	flag_gaps(flag_gaps)
+	qc(qc)
+	subagent(subagent)
+	human_review(human_review)
 	__end__([<p>__end__</p>]):::last
 	__start__ --> intake;
+	draft --> qc;
 	gap_check -.-> draft;
 	gap_check -.-> flag_gaps;
 	intake --> retrieve;
+	qc -.-> draft;
+	qc -. &nbsp;done&nbsp; .-> subagent;
 	retrieve --> gap_check;
-	draft --> __end__;
+	subagent --> human_review;
 	flag_gaps --> __end__;
+	human_review --> __end__;
 	classDef default fill:#f2f0ff,line-height:1.2
 	classDef first fill-opacity:0
 	classDef last fill:#bfb6fc
