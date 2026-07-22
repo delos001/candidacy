@@ -4,13 +4,14 @@ Read this first when resuming work on candidacy. Update it at session close.
 
 ## Where we are
 
-Setup / learning phase of rebuilding the `career` pipeline as a LangGraph app. The
-pipeline itself has NOT been designed yet, by intent. Design decisions so far are in
-`docs/design-decisions.md` (D1-D6). Software, tooling, and cost are now settled. We are
-mid-way through the hands-on LangGraph learning spike. The smoke test passed and the spike
-graph is partly built: state, nodes, edges, a working conditional fork, and diagram output
-are all done and verified. Next primitive to add is a cycle (loop-back) with a loop guard,
-via a QC-fail-retry loop (see Next action). Work is in the VS Code Claude Code extension.
+Rebuilding the `career` pipeline as a LangGraph app. Design decisions so far are in
+`docs/design-decisions.md` (D1-D6). Software, tooling, and cost are settled. The hands-on
+LangGraph learning spike is COMPLETE: every core primitive was built by hand and verified
+(state/nodes/edges, conditional fork, cycle + loop guard, QC re-route, a real Claude
+subagent call, and a human interrupt + checkpointer, plus auto-generated diagram). The
+`spike/` folder is being MOVED OUT of candidacy into a separate `programming-sandbox` repo
+for future reference, so `spike/` will no longer exist here (do not reference its paths).
+Next phase is the real pipeline design (M1). Work is in the VS Code Claude Code extension.
 
 Teaching cadence (important for how the next session must run): the user hand-types every
 line and learns by doing. Deliver ONE small snippet at a time (a few lines), explain it, and
@@ -61,78 +62,54 @@ place and findings out of the auto-loaded context.
   Code extension** (better for hand-typing + a step-debugger for learning; PowerShell remains
   the shell underneath, so the "use PowerShell" rule is unaffected). Extension and CLI share
   the same conversation store, so this session is resumable there.
+- **Learning spike COMPLETE and verified.** Built by hand, every core primitive: state/
+  nodes/edges, conditional fork, cycle + loop guard (`attempts`), QC re-route, real Claude
+  subagent call (`ChatAnthropic` + `claude-haiku-4-5`), and human interrupt + `MemorySaver`
+  checkpointer, plus auto diagram (`graph.mmd`/`graph.png`). The user is moving the whole
+  `spike/` folder (incl. `smoke_test.py`) to a separate `programming-sandbox` repo, so it
+  will be GONE from candidacy; do not reference `spike/` paths going forward.
+- **`.env` key incident (resolved):** the original API key in `spike/.env` was accidentally
+  blanked (the file was open in the editor and autoSave persisted an emptied buffer; VS Code
+  local history confirmed a 130-byte -> 4-byte write). User generated a new key. Lessons for
+  the real build: keep `.env` closed in the editor, keep a durable backup (password manager),
+  and remember API keys are shown only once at creation.
 
-## Next action (resume here): add the cycle + loop guard to the spike
+## Next action (resume here): begin M1 pipeline design
 
-`spike/spike.py` already runs and demonstrates state, nodes, edges, a conditional fork
-(`gap_check` -> `route_after_gap_check` -> `draft`/`flag_gaps`, with a path_map so the
-diagram draws it), and diagram output (`spike/graph.mmd` + `spike/graph.png` via
-`draw_mermaid()` / `draw_mermaid_png()`, PNG wrapped in try/except). Verified both branches
-by changing the input role.
+The learning spike is COMPLETE (see Done) and its folder is being moved out to a separate
+`programming-sandbox` repo, so do not reference `spike/` paths. The real design work starts
+now. First slice is M1: intake -> retrieval -> gap-analysis.
 
-RESUME HERE: build a QC-fail-retry **cycle** next. Add a `qc` node after `draft`, a router
-that on "fail" re-routes BACK to `draft` (a backward edge = a cycle), and a loop-count guard
-in state (e.g. an `attempts` int) that forces the router to give up after N tries so it can't
-loop forever. This is the first primitive that makes a graph more than a linear script.
-Deliver one small snippet at a time per the teaching cadence above.
+Per CLAUDE.md migration approach:
+- Build the graph spine first (real shared-state schema + topology), then fill steps one at a
+  time. Do not port a skill until its step exists in the graph.
+- Port each `career` skill through the quarantine step: copy it, sort every line into judgment
+  (keep -> becomes step logic or loadable prompt text), orchestration (delete, the graph owns
+  it), or bloat (delete). A skill is done being ported when every line is assigned.
+- A step earns standalone status only if it carries a seam (reshapes state, routes, gates on
+  human review, fans out, or is independently retryable); otherwise it folds into a neighbor.
+  Any step that brings prior work forward for user review always stays distinct.
 
-Still remaining after the cycle (original spec, unbuilt): the subagent trigger (a node that
-delegates a sub-task, done as the REAL Claude call to `claude-haiku-4-5` via `ChatAnthropic`
-from `langchain-anthropic`, key from `spike/.env`), and a human stop-and-wait (interrupt +
-checkpointer so the run can pause/resume). Confirm model id / `ChatAnthropic` usage against
-the claude-api skill when building the Claude node.
+Concrete first moves: (1) read the `career` repo (`C:\Users\delos\code\career`) intake/
+retrieval/gap-analysis skills to inventory what each does; (2) draft the real State schema for
+M1; (3) sketch the M1 topology. Teaching cadence still applies: one small snippet at a time,
+the user hand-types, flag contrived examples.
 
-Housekeeping: `spike/smoke_test.py` served its purpose (real call confirmed) and can be
-deleted; ask the user before deleting.
+Design patterns confirmed during the spike (carry these into the real build):
+- Skill/instruction CONTENT lives in flat files (`.md`/`.txt`) that a node reads into its
+  prompt at runtime; the `.py` holds only orchestration. Sorting a career skill splits it:
+  judgment -> loadable prompt text; orchestration -> graph topology.
+- Run state/history goes to a checkpointer (RAM `MemorySaver` for dev; SQLite/Postgres for
+  durable, survives process exit). This is a separate "memory" from the instruction files.
+- LLM node call path: `ChatAnthropic` from `langchain-anthropic`, model id `claude-haiku-4-5`
+  (spike only; real tiers are the deferred bake-off, issue #1), key from a gitignored `.env`
+  via `load_dotenv`. Human stop-and-wait = `interrupt()` in a node + `Command(resume=...)` on
+  the second `invoke`, with the same `thread_id` config on both calls.
 
----
-### Original spike spec (for reference)
-
-A small, throwaway, runnable LangGraph script to make the primitives concrete. Agreed spec:
-
-- One script in candidacy in a clearly-marked `spike/` folder (disposable, separate from any
-  real work). Themed lightly on the application pipeline (intake -> retrieve -> gap-check ->
-  draft -> qc -> review -> finalize) but fake.
-- Must demonstrate: shared state (the notepad), nodes, edges, a fork (conditional edge), a
-  re-route back to a previous step (a cycle, with a loop-count guard), a small QC trigger
-  (re-route on fail), a subagent trigger (a node that delegates a small sub-task), and a
-  human stop-and-wait (interrupt + a checkpointer so it can pause/resume).
-- Auto-generate a diagram each run: a PNG via LangGraph's built-in Mermaid render, plus the
-  Mermaid text saved alongside. (LangGraph Studio is a later, optional upgrade.)
-- Subagent step is a **real Claude call** (`claude-haiku-4-5`) via `ChatAnthropic` from
-  `langchain-anthropic`, key loaded from `spike/.env` via python-dotenv. Confirm the exact
-  model id and `ChatAnthropic` usage against the claude-api reference when writing that node.
-
-IMMEDIATE next step (in VS Code, session resumed there):
-1. **Smoke test the real call.** Type this into `spike/smoke_test.py` (throwaway, delete after):
-
-   ```python
-   from dotenv import load_dotenv
-   from langchain_anthropic import ChatAnthropic
-
-   load_dotenv("spike/.env")
-   llm = ChatAnthropic(model="claude-haiku-4-5", max_tokens=50)
-   print(llm.invoke("Say hello in exactly five words.").content)
-   ```
-
-   Run from the project root: `conda activate agents; python spike/smoke_test.py`. A
-   five-word greeting = billing + key + env all confirmed. On error, a bad key vs an unfunded
-   account give distinct messages.
-2. **Build the spike** per the sequence below (deliver as snippets the user types, not file
-   writes). The `spike/` folder already exists; `spike/.env` holds the key.
-
-Environment-switch reference (mostly done): VS Code extension installed + signed in; resume
-this conversation via the Claude Code panel's **Session history** button (extension + CLI
-share one store). CLI `claude --continue` / `--resume` also works but needs the standalone
-CLI on PATH (`irm https://claude.ai/install.ps1 | iex`), separate from the extension's bundle.
-
-Agreed build sequence for the spike: (1) state schema + node stubs + wiring, run dry;
-(2) add fork/cycle/loop-guard; (3) add interrupt + checkpointer; (4) swap gap_check to the
-real Claude call; (5) add diagram output (write `spike/graph.mmd` + render `spike/graph.png`,
-render wrapped in try/except). Deliver as snippets for the user to type, not file writes.
-
-After the spike lands, the real design work begins (map the intake/retrieval/gap-analysis
-skills, the shared state schema, the graph topology).
+A script-organization convention was also developed this session (greppable banner tokens:
+`# ==> Section:` for top-level sections, `# --> Node/Router (name)` for members, each router
+kept directly under the node it reads). The user may reuse it for the real app; it lives in
+his head / the moved spike, not in a doc here.
 
 ## Open questions / blockers
 
